@@ -1,0 +1,47 @@
+FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/backend-venv/bin:/app/stable-diffusion-webui-forge/venv/bin:$PATH"
+
+RUN apt-get update && apt-get install -y \
+    git=1:2.34.1-1ubuntu1.11 \
+    supervisor=4.2.2-2 \
+    redis-server=5:6.0.16-1ubuntu1 \
+    nodejs=16.20.2-deb-1nodesource1 \
+    npm=8.5.1~ds-1 \
+    wget=1.21.2-2ubuntu1.1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Clone the devastrar/modella-manager repository
+RUN git clone https://github.com/devastrar/modella-manager.git /app/modella-manager
+
+# Set working directory to the cloned repository
+WORKDIR /app/modella-manager
+
+# Set up front-end
+RUN cd front-end && npm install && npm run build
+RUN mkdir -p /var/www/modella-manager && \
+    cp -r front-end/build/* /var/www/modella-manager/
+
+# Set up back-end
+RUN python3.11 -m venv /app/backend-venv && \
+    /app/backend-venv/bin/pip install --upgrade pip && \
+    /app/backend-venv/bin/pip install -r back-end/requirements.txt
+
+# Set up Stable Diffusion WebUI Forge
+RUN git clone https://github.com/lllyasviel/stable-diffusion-webui-forge.git /app/stable-diffusion-webui-forge
+RUN python3.11 -m venv /app/stable-diffusion-webui-forge/venv && \
+    /app/stable-diffusion-webui-forge/venv/bin/pip install --upgrade pip && \
+    /app/stable-diffusion-webui-forge/venv/bin/pip install -r /app/stable-diffusion-webui-forge/requirements.txt
+
+# Copy configuration files
+COPY post_start.sh /post_start.sh
+RUN chmod +x /post_start.sh
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY app.conf /etc/nginx/conf.d/app.conf
+
+# Expose ports: 4444 for Modella Manager front-end, 7861 for Stable Diffusion WebUI
+EXPOSE 4444 7861

@@ -1,0 +1,9 @@
+# .gitignore
+node_modules/
+build/
+*.log
+.DS_Store
+md.sh
+# tools/
+# docs/
+# guides/

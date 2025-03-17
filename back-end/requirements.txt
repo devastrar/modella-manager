@@ -1,0 +1,8 @@
+Flask==2.3.2
+Flask-JWT-Extended==4.5.0
+requests==2.31.0
+celery==5.3.4
+redis==5.0.1
+cryptography==41.0.4
+pathlib==1.0.1
+huggingface_hub==0.17.3
